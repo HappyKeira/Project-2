@@ -4,6 +4,7 @@ let countryColors = {};
 let tooltipVisible = false;
 let tooltipContent = {};
 let tooltip;
+let legend;
 
 
 function preload() {
@@ -17,16 +18,16 @@ function setup() {
 
 
   let colors = [
-    color(0, 0, 255),     // US
-    color(252, 214, 143), // CN
-    color(0, 204, 150),   // UK
-    color(132, 112, 255), // CA
-    color(255, 69, 0),    // IN
-    color(0, 255, 255),   // DE
-    color(255, 166, 0),   // BR
-    color(182, 232, 128), // PO
-    color(255, 0, 255),   // RU
-    color(173, 216, 230)  // SP
+    color(0, 0, 255),     // 
+    color(252, 214, 143),   // 
+    color(0, 204, 150),   // 
+    color(132, 112, 255), // 
+    color(255, 69, 0),    //  
+    color(0, 255, 255),   // 
+    color(255, 166, 0), // 
+    color(182, 232, 128), //  
+    color(255, 0, 255),   // 
+    color(173, 216, 230)  // 
   ];
 
 
@@ -39,6 +40,7 @@ function setup() {
   // Calculate plot dimensions
   plotWidth = width - 5 * margin;
   plotHeight = height - 2 * margin;
+
 
 
 
@@ -127,6 +129,7 @@ function setup() {
   }
 
 
+
   // Draw data points
   for (let row of table.rows) {
     let country = row.getString('Country');
@@ -146,7 +149,6 @@ function setup() {
 
   for (let i = 0; i < topCountries.length; i++) {
     let country = topCountries[i];
-    country = country.replace(/"/g, ''); // Remove quotes
     let x = legendX;
     let y = legendY + i * legendSpacing;
     fill(countryColors[topCountries[i]]);
@@ -155,46 +157,102 @@ function setup() {
     text(country, x + 15, y);
   }
 
-  //Create Tooltip
+  //Add Tooltip
   tooltip = createDiv('');
   tooltip.position(10, 10);
+  tooltip.hide();
   tooltip.style('background-color', 'white');
   tooltip.style('padding', '10px');
   tooltip.style('border', '1px solid black');
   tooltip.style('line-height', '1.5');
-  tooltip.hide();
 
 
-  let tooltipFont = textFont();
-  let tooltipFontSize = 12;
-  tooltip.style('font-family', tooltipFont);
-  tooltip.style('font-size', `${tooltipFontSize}px`);
-
+let tooltipFont = textFont();
+let tooltipFontSize = 12; 
+tooltip.style('font-family', tooltipFont);
+tooltip.style('font-size', `${tooltipFontSize}px`);
+  
+  
+    // Create legend with checkboxes for each country
+  legend = createLegend();
 }
+
+function createLegend() {
+  let legendItems = [];
+
+  for (let i = 0; i < topCountries.length; i++) {
+    let country = topCountries[i];
+    country = country.replace(/"/g, ''); // Remove quotes
+    let checkbox = createCheckbox(country, true);
+    checkbox.changed(toggleCountryVisibility);
+    checkbox.style('font-size', '12px'); // Set font size
+    checkbox.style('font-family', 'sans-serif'); // Set font family
+    checkbox.style('color', 'black'); // Set text color
+    
+    legendItems.push({ country, checkbox });
+  }
+
+  return legendItems;
+}
+
+function toggleCountryVisibility() {
+    clear(); // Clear and redraw the canvas
+
+  for (let item of legend) {
+    let country = item.country;
+    let visible = item.checkbox.checked();
+
+    for (let row of table.rows) {
+      if (row.getString('Country') === country) {
+        let x = map(row.getNum('WaterQuality'), 0, 100, plotX, plotX + plotWidth);
+        let y = map(row.getNum('AirQuality'), 0, 100, plotY + plotHeight, plotY);
+
+        if (visible) {
+          fill(countryColors[country]);
+          ellipse(x, y, 8, 8);
+        } else {
+          //fill(255); // Change to background color
+          //ellipse(x, y, 8, 8);
+        }
+      }
+    }
+  }
+
+
+  
+}
+
+
+
+
+
 
 function draw() {
   let hovered = false;
 
-  for (let row of table.rows) {
-    let country = row.getString('Country');
-    if (topCountries.includes(country)) {
-      let x = map(row.getNum('WaterQuality'), 0, 100, plotX, plotX + plotWidth);
-      let y = map(row.getNum('AirQuality'), 0, 100, plotY + plotHeight, plotY);
-      let d = dist(mouseX, mouseY, x, y);
+  for (let item of legend) {
+    let country = item.country;
+    let visible = item.checkbox.checked();
 
-      if (d < 8) {
-        hovered = true;
+    for (let row of table.rows) {
+      if (row.getString('Country') === country && visible) {
+        let x = map(row.getNum('WaterQuality'), 0, 100, plotX, plotX + plotWidth);
+        let y = map(row.getNum('AirQuality'), 0, 100, plotY + plotHeight, plotY);
+        let d = dist(mouseX, mouseY, x, y);
 
-        tooltip.html(`
-          City: ${row.getString('City')}<br>
-          Region: ${row.getString('Region').replace(/"/g, '')}<br>
-          Country: ${row.getString('Country').replace(/"/g, '')}<br>
-          Air Quality: ${row.getNum('AirQuality')}<br>
-          Water Quality: ${row.getNum('WaterQuality')}
-        `);
-        tooltip.show();
-        tooltip.position(mouseX + 10, mouseY - 10);
-        break;
+        if (d < 8) {
+          hovered = true;
+          tooltip.html(`
+            City: ${row.getString('City')}<br>
+            Region: ${row.getString('Region').replace(/"/g, '')}<br>
+            Country: ${row.getString('Country').replace(/"/g, '')}<br>
+            Air Quality: ${row.getNum('AirQuality')}<br>
+            Water Quality: ${row.getNum('WaterQuality')}
+          `);
+          tooltip.show();
+          tooltip.position(mouseX + 10, mouseY - 10);
+          break;
+        }
       }
     }
   }
@@ -202,5 +260,4 @@ function draw() {
   if (!hovered) {
     tooltip.hide();
   }
-
 }
